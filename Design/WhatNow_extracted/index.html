@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>WhatNow — Film companion</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg:#08080a; --bg2:#101013; --surface:#161619; --surface2:#1f1f24; --surface3:#27272d;
+    --line:rgba(255,255,255,0.08); --line2:rgba(255,255,255,0.15);
+    --tx:#f5f4f1; --tx2:#a4a4ad; --tx3:#6b6b74;
+    --amber1:#FF7A18; --amber2:#FFB347; --amber:#FF8A2B;
+    --glow:rgba(255,138,43,0.38);
+    --r:14px; --r2:20px;
+    --sans:'Space Grotesk', system-ui, sans-serif;
+    --mono:'JetBrains Mono', ui-monospace, monospace;
+  }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  html, body {
+    margin:0; padding:0; height:100%;
+    background:#000;
+    font-family:var(--sans);
+    -webkit-font-smoothing:antialiased; text-rendering:optimizeLegibility;
+  }
+  #stage {
+    height:100vh; width:100%; overflow:hidden;
+    display:flex; align-items:flex-start; justify-content:center;
+    background:
+      radial-gradient(1100px 700px at 50% -10%, rgba(255,122,24,0.10), transparent 60%),
+      radial-gradient(900px 600px at 80% 110%, rgba(120,60,200,0.07), transparent 60%),
+      #050506;
+  }
+  #root { transform-origin:top center; }
+  /* hide scrollbars inside app for native feel */
+  .wn-scroll { overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .wn-scroll::-webkit-scrollbar { display:none; }
+  .wn-hscroll { overflow-x:auto; overflow-y:hidden; scrollbar-width:none; }
+  .wn-hscroll::-webkit-scrollbar { display:none; }
+  /* range reset */
+  input[type=range]{ -webkit-appearance:none; appearance:none; background:transparent; }
+  input[type=range]::-webkit-slider-thumb{ -webkit-appearance:none; }
+  ::selection { background:rgba(255,138,43,0.3); }
+  .wn-root { user-select:none; }
+  @keyframes wnFadeUp { from { opacity:0; transform:translateY(14px); } to { opacity:1; transform:none; } }
+  @keyframes wnFade { from { opacity:0; } to { opacity:1; } }
+  @keyframes wnPop { 0%{ transform:scale(.92); opacity:0; } 60%{ transform:scale(1.02);} 100%{ transform:scale(1); opacity:1; } }
+  @keyframes wnSlideUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+  @keyframes wnGlow { 0%,100%{ box-shadow:0 0 0 0 rgba(255,138,43,0.0);} 50%{ box-shadow:0 0 22px 2px rgba(255,138,43,0.35);} }
+  @keyframes wnSpinIn { from { stroke-dashoffset:var(--dash);} to { stroke-dashoffset:var(--off);} }
+</style>
+</head>
+<body>
+  <div id="stage"><div id="root"></div></div>
+
+  <template id="__bundler_thumbnail">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+      <rect width="100" height="100" fill="#08080a"/>
+      <circle cx="50" cy="42" r="20" fill="none" stroke="#FF8A2B" stroke-width="4"/>
+      <path d="M44 34 L60 42 L44 50 Z" fill="#FFB347"/>
+      <text x="50" y="78" font-family="monospace" font-size="11" fill="#FF8A2B" text-anchor="middle" letter-spacing="1">WHATNOW</text>
+    </svg>
+  </template>
+
+  <script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+  <script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+  <script type="text/babel" src="ios-frame.jsx"></script>
+  <script type="text/babel" src="tweaks-panel.jsx"></script>
+  <script type="text/babel" src="components.jsx"></script>
+  <script type="text/babel" src="data.jsx"></script>
+  <script type="text/babel" src="screens-discover.jsx"></script>
+  <script type="text/babel" src="screens-detail.jsx"></script>
+  <script type="text/babel" src="screens-quiz.jsx"></script>
+  <script type="text/babel" src="screens-search.jsx"></script>
+  <script type="text/babel" src="screens-misc.jsx"></script>
+  <script type="text/babel" src="app.jsx"></script>
+
+  <script>
+    // Fit the fixed 402×874 phone to the viewport
+    (function () {
+      function fit() {
+        var root = document.getElementById('root');
+        if (!root || !root.firstChild) return;
+        var s = Math.min((window.innerWidth - 28) / 402, (window.innerHeight - 24) / 874, 1);
+        root.style.transform = 'scale(' + s + ')';
+        root.style.marginTop = Math.max(8, (window.innerHeight - 874 * s) / 2) + 'px';
+      }
+      window.addEventListener('resize', fit);
+      var iv = setInterval(fit, 250);
+      window.addEventListener('load', fit);
+    })();
+  </script>
+</body>
+</html>

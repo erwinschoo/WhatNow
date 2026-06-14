@@ -1,0 +1,21 @@
+{
+  "name": "whatnow-pipeline",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "Offline build-pipeline: TMDB+OMDb ophalen, Claude verrijken (feel/thema's/trivia/quiz), embeddings + thematische ketens, en alles bundelen tot app/public/data/catalog.json.",
+  "scripts": {
+    "build": "tsx src/build.ts",
+    "build:sample": "tsx src/build.ts --limit 10",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.68.0",
+    "@xenova/transformers": "^2.17.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "tsx": "^4.19.2",
+    "typescript": "^5.6.3"
+  }
+}

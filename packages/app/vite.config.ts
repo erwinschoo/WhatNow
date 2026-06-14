@@ -1,0 +1,102 @@
+import { execSync } from "node:child_process";
+import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { defineConfig, type Plugin } from "vite";
+import react from "@vitejs/plugin-react";
+import { VitePWA } from "vite-plugin-pwa";
+
+/* Injecteert een Content-Security-Policy als <meta> in de PRODUCTIE-build.
+ * GitHub Pages kan geen HTTP-headers zetten, dus de CSP gaat in de HTML zelf.
+ * Alleen bij `build` (niet in dev — daar zou het Vite's HMR/inline scripts breken).
+ * De hashes van inline <script>-blokken (de thema-bootstrap) worden automatisch
+ * berekend, zodat we 'unsafe-inline' voor scripts kunnen vermijden. */
+function cspPlugin(): Plugin {
+  let isBuild = false;
+  return {
+    name: "whatnow-csp",
+    configResolved(c) { isBuild = c.command === "build"; },
+    transformIndexHtml: {
+      order: "post",
+      handler(html) {
+        if (!isBuild) return html;
+        const hashes = new Set<string>();
+        for (const m of html.matchAll(/<script(?![^>]*\bsrc=)[^>]*>([\s\S]*?)<\/script>/g)) {
+          if (!m[1]) continue;
+          hashes.add(`'sha256-${createHash("sha256").update(m[1], "utf8").digest("base64")}'`);
+        }
+        const csp = [
+          "default-src 'self'",
+          `script-src 'self' ${[...hashes].join(" ")}`.trim(),
+          "style-src 'self' 'unsafe-inline'", // React inline-styles (style={{…}})
+          // img: posters van de TMDB-CDN, plus data/blob voor placeholders/profielfoto.
+          "img-src 'self' data: blob: https://image.tmdb.org",
+          // graph + login voor OneDrive-sync; de OneDrive-content-hosts zijn nodig omdat een
+          // GET op bestandsinhoud bij een persoonlijk account 302-redirect naar een download-host.
+          "connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com https://*.microsoftpersonalcontent.com https://*.dms.live.com https://*.sharepoint.com",
+          "frame-src https://login.microsoftonline.com", // MSAL silent-token iframe
+          "font-src 'self' https://fonts.gstatic.com",
+          "object-src 'none'",
+          "base-uri 'self'",
+          "form-action 'self'",
+        ].join("; ");
+        return html.replace("</head>", `  <meta http-equiv="Content-Security-Policy" content="${csp}">\n  </head>`);
+      },
+    },
+  };
+}
+
+// GitHub Pages serveert op een subpad: https://<gebruiker>.github.io/whatnow/
+const base = process.env.GITHUB_PAGES === "true" ? "/whatnow/" : "/";
+
+const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf-8"));
+const clean = (v: string) => v.replace(/^[^0-9]*/, "");
+function gitCommit(): string {
+  try {
+    return execSync("git rev-parse --short HEAD").toString().trim();
+  } catch {
+    return "—";
+  }
+}
+
+export default defineConfig({
+  base,
+  define: {
+    __APP_VERSION__: JSON.stringify(pkg.version),
+    __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
+    __GIT_COMMIT__: JSON.stringify(gitCommit()),
+  },
+  plugins: [
+    cspPlugin(),
+    react(),
+    VitePWA({
+      strategies: "injectManifest",
+      srcDir: "src/pwa",
+      filename: "sw.ts",
+      registerType: "autoUpdate",
+      injectRegister: "script-defer",
+      includeAssets: ["icon.svg"],
+      manifest: {
+        name: "WhatNow — filmcompagnon",
+        short_name: "WhatNow",
+        description: "Diepe, thematische filmsuggesties afgestemd op jouw smaak — plus quizzes en trivia.",
+        lang: "nl",
+        theme_color: "#08080a",
+        background_color: "#08080a",
+        display: "standalone",
+        start_url: ".",
+        scope: ".",
+        // v1 gebruikt het SVG-icoon (geldig voor installatie). Voor scherpe maskable-PNG's
+        // op alle platforms: genereer pwa-192/512 + maskable met @vite-pwa/assets-generator
+        // en voeg ze hier toe (zie README).
+        icons: [
+          { src: "icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" },
+        ],
+      },
+      injectManifest: {
+        globPatterns: ["**/*.{js,css,html,json,svg,png,woff2}"],
+        maximumFileSizeToCacheInBytes: 8 * 1024 * 1024, // catalog.json kan enkele MB zijn
+      },
+      devOptions: { enabled: true, type: "module", navigateFallback: "index.html" },
+    }),
+  ],
+});

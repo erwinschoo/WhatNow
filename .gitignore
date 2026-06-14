@@ -1,0 +1,23 @@
+# dependencies
+node_modules/
+
+# builds
+dist/
+dev-dist/
+
+# secrets & local config
+.env
+*.local
+
+# pipeline cache (gegenereerde API-responses)
+packages/pipeline/cache/
+
+# design-archief (de uitgepakte versie staat al als bronbestanden in Design/WhatNow_extracted)
+Design/WhatNow.zip
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Claude Code local settings
+.claude/settings.local.json
