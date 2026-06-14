@@ -45,8 +45,8 @@ function cspPlugin(): Plugin {
   };
 }
 
-// GitHub Pages serveert op een subpad: https://<gebruiker>.github.io/whatnow/
-const base = process.env.GITHUB_PAGES === "true" ? "/whatnow/" : "/";
+// GitHub Pages serveert op een subpad: https://<gebruiker>.github.io/WhatNow/
+const base = process.env.GITHUB_PAGES === "true" ? "/WhatNow/" : "/";
 
 const pkg = JSON.parse(readFileSync(new URL("./package.json", import.meta.url), "utf-8"));
 const clean = (v: string) => v.replace(/^[^0-9]*/, "");

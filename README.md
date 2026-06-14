@@ -37,7 +37,7 @@ dus hij werkt direct.
 ### OneDrive-sync configureren
 Maak een **Microsoft Entra** "single-page application"-registratie aan (persoonlijke
 Microsoft-accounts) met redirect-URI's `http://localhost:5173/` en
-`https://<gebruiker>.github.io/whatnow/`, delegated permissions `Files.ReadWrite.AppFolder` +
+`https://<gebruiker>.github.io/WhatNow/`, delegated permissions `Files.ReadWrite.AppFolder` +
 `User.Read`. Zet de client-ID in `packages/app/.env` als `VITE_MS_CLIENT_ID`.
 
 ## De catalogus genereren (pipeline)
@@ -60,7 +60,7 @@ Breid de catalogus uit door titels toe te voegen aan `packages/pipeline/seed.jso
 
 ## Deploy
 
-Push naar `main` → GitHub Actions bouwt `packages/app` met `GITHUB_PAGES=true` (base `/whatnow/`)
+Push naar `main` → GitHub Actions bouwt `packages/app` met `GITHUB_PAGES=true` (base `/WhatNow/`)
 en publiceert naar GitHub Pages. Zet `VITE_MS_CLIENT_ID` als repository-variabele voor sync.
 
 ## Nog te doen / nice-to-have
