@@ -26,7 +26,7 @@ synct optioneel naar de **OneDrive App Folder** via Microsoft Graph (bokkiep-pat
 cd packages/app
 npm install
 cp .env.example .env     # optioneel: vul VITE_MS_CLIENT_ID in voor OneDrive-sync
-npm run dev              # http://localhost:5173
+npm run dev              # http://localhost:5320
 npm run build            # productie-build (tsc + vite)
 npm run preview          # build lokaal serveren (PWA/offline testen)
 ```
@@ -36,7 +36,7 @@ dus hij werkt direct.
 
 ### OneDrive-sync configureren
 Maak een **Microsoft Entra** "single-page application"-registratie aan (persoonlijke
-Microsoft-accounts) met redirect-URI's `http://localhost:5173/` en
+Microsoft-accounts) met redirect-URI's `http://localhost:5320/` en
 `https://<gebruiker>.github.io/WhatNow/`, delegated permissions `Files.ReadWrite.AppFolder` +
 `User.Read`. Zet de client-ID in `packages/app/.env` als `VITE_MS_CLIENT_ID`.
 

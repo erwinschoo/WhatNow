@@ -60,6 +60,9 @@ function gitCommit(): string {
 
 export default defineConfig({
   base,
+  // Unieke dev-poort (zie ../../Projects/DEV-SERVERS.md). strictPort: faal hard bij bezetting
+  // i.p.v. stilletjes een andere poort kiezen — anders klopt de MSAL-redirect-URI niet meer.
+  server: { port: 5320, strictPort: true },
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
     __BUILD_DATE__: JSON.stringify(new Date().toISOString()),
