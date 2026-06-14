@@ -1,7 +1,7 @@
 /* Film-detail + thematische keten + trivia, en het Tune-paneel — geport uit screens-detail.jsx. */
 import { useRef, useState } from "react";
 import { useWN } from "../state/AppContext";
-import { Icon, Poster, ScorePill, ThemeChip, FacetChip, GlowButton, FeelSlider, Eyebrow } from "../components/ui";
+import { Icon, Poster, ScorePill, scoreEntries, ThemeChip, FacetChip, GlowButton, FeelSlider, Eyebrow } from "../components/ui";
 import { getCatalog } from "../data/catalog";
 import { feelMatch } from "../reco/reco";
 import { FEELS, GENRES, DECADES } from "../data/config";
@@ -97,7 +97,7 @@ export function Detail({ id }: { id: string }) {
 
       <div style={{ padding: "6px 18px 30px" }}>
         <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
-          {(["imdb", "rt", "mc"] as const).map((s) => <ScorePill key={s} src={s} value={film.scores[s]} />)}
+          {scoreEntries(film.scores).map((e) => <ScorePill key={e.src} src={e.src} value={e.value} />)}
           {film.cult && <div style={{ display: "inline-flex", alignItems: "center", padding: "6px 11px", borderRadius: 999, border: "1px solid var(--amber)", color: "var(--amber2)", fontFamily: "var(--mono)", fontSize: 10.5, letterSpacing: 0.5 }}>CULT</div>}
         </div>
 
@@ -133,7 +133,7 @@ export function Detail({ id }: { id: string }) {
                 <div style={{ width: 46, height: 68, flexShrink: 0, borderRadius: 9 }}><Poster film={cf} showText={false} rounded={9} /></div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ fontFamily: "var(--sans)", fontWeight: 700, fontSize: 14.5, color: "var(--tx)" }}>{cf.title}</div>
-                  <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--tx3)", marginTop: 3 }}>{cf.year} · ★ {cf.scores.imdb.toFixed(1)}</div>
+                  <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--tx3)", marginTop: 3 }}>{cf.year} · ★ {(cf.scores.imdb ?? cf.scores.tmdb ?? 0).toFixed(1)}</div>
                   <div style={{ display: "flex", gap: 5, marginTop: 7, flexWrap: "wrap" }}>
                     {cf.themes.filter((x) => film.themes.includes(x)).slice(0, 2).map((x) => <span key={x} style={{ fontFamily: "var(--mono)", fontSize: 9, color: "var(--amber2)", background: "rgba(255,138,43,0.1)", padding: "2px 7px", borderRadius: 5 }}>{x}</span>)}
                   </div>

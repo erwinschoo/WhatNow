@@ -96,8 +96,10 @@ export default defineConfig({
         ],
       },
       injectManifest: {
-        globPatterns: ["**/*.{js,css,html,json,svg,png,woff2}"],
-        maximumFileSizeToCacheInBytes: 8 * 1024 * 1024, // catalog.json kan enkele MB zijn
+        globPatterns: ["**/*.{js,css,html,svg,png,woff2}"],
+        // data/ (catalog.json + catalog-meta.json) NIET precachen: die beheren we zelf via de
+        // versiecheck + IndexedDB (zie src/data/catalog.ts), anders serveert de SW een stale catalogus.
+        globIgnores: ["**/data/**"],
       },
       devOptions: { enabled: true, type: "module", navigateFallback: "index.html" },
     }),

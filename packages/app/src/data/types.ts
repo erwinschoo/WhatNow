@@ -1,15 +1,22 @@
-/* Datamodel voor WhatNow — leidend voor zowel de gebundelde catalogus als de pipeline-output.
- * Afgeleid van het design (Design/WhatNow_extracted/data.jsx). De feel-sleutels blijven
- * bewust gelijk (comedic/emotional, niet comedicValue/emotionalDepth) zodat pipeline en app matchen. */
+/* Datamodel voor WhatNow — leidend voor de gebundelde/gehoste catalogus en de pipeline-output.
+ * De feel-sleutels blijven gelijk (comedic/emotional). Thema's zijn nu een 0–10 vector
+ * (themeScores) met een afgeleide top-N labellijst (themes) voor chips/back-compat. */
 
 export type FeelKey = "cinematography" | "intrigue" | "comedic" | "emotional" | "pace";
-
 export type Feel = Record<FeelKey, number>; // elk 0–10
 
+/* Canonieke thema-sleutels (lowercase, ascii). Labels staan in data/config.ts (THEMES). */
+export type ThemeKey =
+  | "herinnering" | "identiteit" | "eenzaamheid" | "tijd" | "klasse" | "verlangen" | "lot"
+  | "dromen" | "technologie" | "geweld" | "familie" | "hebzucht" | "geloof" | "verlies";
+
+export type ThemeScores = Partial<Record<ThemeKey, number>>; // elk 0–10
+
 export interface FilmScores {
-  imdb: number; // 0–10
-  rt: number; // 0–100
-  mc: number; // 0–100
+  tmdb?: number; // 0–10, vrijwel altijd aanwezig (TMDB-rating)
+  imdb?: number; // 0–10 (OMDb)
+  rt?: number; // 0–100 (OMDb, Rotten Tomatoes)
+  mc?: number; // 0–100 (OMDb, Metacritic)
 }
 
 export interface CatalogFilm {
@@ -21,33 +28,36 @@ export interface CatalogFilm {
   genres: string[];
   decade: string;
   cult: boolean;
-  themes: string[];
+  themes: string[]; // afgeleide top-N labels (voor chips); themeScores is leidend
+  themeScores?: ThemeScores; // 0–10 per thema (gradient) — ontbreekt in de mock-fallback
   scores: FilmScores;
   feel: Feel;
   why: string;
   synopsis: string;
   trivia: string[];
-  /* Poster: TMDB-CDN-URL in de echte catalogus. `grad`/`ink` zijn de gradient-fallback/placeholder
-   * uit het design en worden getoond tijdens het laden of als er geen poster is. */
   posterUrl?: string;
   backdropUrl?: string;
   grad: [string, string];
   ink: string;
-  /* Precomputed thematische keten ("meer zoals dit"): id's van de dichtstbijzijnde films,
-   * offline berekend via embeddings. Vervangt de hardgecodeerde CHAINS uit het design. */
-  chain: string[];
+  chain: string[]; // precomputed thematische buren (embeddings)
 }
 
 export interface QuizQuestion {
   q: string;
   options: string[];
-  answer: number; // index in options
+  answer: number;
   fact: string;
-  film: string; // film-id
+  film: string;
 }
 
 export interface Catalog {
   version: number;
   films: CatalogFilm[];
   quiz: QuizQuestion[];
+}
+
+/* Klein meta-bestand voor de versie-gestuurde update (zie data/catalog.ts). */
+export interface CatalogMeta {
+  version: number;
+  count: number;
 }

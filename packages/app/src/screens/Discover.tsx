@@ -1,7 +1,7 @@
 /* Discover-feed (TikTok-variant + rijen-variant) — geport uit screens-discover.jsx. */
 import { useRef, useState } from "react";
 import { useWN } from "../state/AppContext";
-import { Icon, Poster, ScorePill, ThemeChip, GlowButton, Eyebrow } from "../components/ui";
+import { Icon, Poster, ScorePill, scoreEntries, ThemeChip, GlowButton, Eyebrow } from "../components/ui";
 import { getCatalog } from "../data/catalog";
 import { personalFeed, seedChain, seedWhy } from "../reco/reco";
 import type { CatalogFilm } from "../data/types";
@@ -38,7 +38,7 @@ export function FilmTile({ film, onClick, w = 132, style = "poster" }: { film: C
     <button onClick={onClick} style={{ width: w, cursor: "pointer", background: "none", border: "none", padding: 0, flexShrink: 0 }}>
       <div style={{ width: w, height: w * 1.5, boxShadow: "0 8px 22px rgba(0,0,0,0.4)", borderRadius: 13 }}><Poster film={film} rounded={13} /></div>
       <div style={{ display: "flex", gap: 5, marginTop: 8, alignItems: "center" }}>
-        <span style={{ fontFamily: "var(--mono)", fontSize: 10, fontWeight: 700, color: "#f5c518" }}>★ {film.scores.imdb.toFixed(1)}</span>
+        <span style={{ fontFamily: "var(--mono)", fontSize: 10, fontWeight: 700, color: "#f5c518" }}>★ {(film.scores.imdb ?? film.scores.tmdb ?? 0).toFixed(1)}</span>
         <span style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: "var(--tx3)" }}>{film.genres[0]}</span>
       </div>
     </button>
@@ -103,7 +103,7 @@ function FeedSlide({ film, onOpen, onWatchlist, onSeen, inList, motion, whyText 
           <div style={{ fontFamily: "var(--sans)", fontWeight: 700, fontSize: 34, lineHeight: 0.98, color: "#fff", letterSpacing: -0.5 }}>{film.title}</div>
           <div style={{ fontFamily: "var(--mono)", fontSize: 11.5, color: "rgba(255,255,255,0.75)", marginTop: 9 }}>{film.year} · {film.dir} · {film.runtime}m</div>
           <div style={{ display: "flex", gap: 7, marginTop: 12 }}>
-            {(["imdb", "rt", "mc"] as const).map((s) => <ScorePill key={s} src={s} value={film.scores[s]} compact />)}
+            {scoreEntries(film.scores).map((e) => <ScorePill key={e.src} src={e.src} value={e.value} compact />)}
           </div>
           <div style={{ display: "flex", gap: 8, marginTop: 16, alignItems: "flex-start" }}>
             <div style={{ width: 3, alignSelf: "stretch", borderRadius: 3, background: "linear-gradient(var(--amber1), var(--amber2))", flexShrink: 0 }} />

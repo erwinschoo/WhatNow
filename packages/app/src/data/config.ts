@@ -1,6 +1,33 @@
-/* Statische UI-configuratie (geen catalogusdata): feel-dimensies, onboarding-opties en badges.
+/* Statische UI-configuratie (geen catalogusdata): feel-dimensies, thema's, onboarding-opties, badges.
  * Uit het design (Design/WhatNow_extracted/data.jsx). */
-import type { FeelKey } from "./types";
+import type { FeelKey, ThemeKey } from "./types";
+
+/* Canonieke thema's — de 14 die de gebruiker in onboarding kiest en waarop films 0–10 scoren.
+ * `key` is de stabiele sleutel in themeScores; `label` is de Nederlandse weergave (chips/onboarding). */
+export interface ThemeDef {
+  key: ThemeKey;
+  label: string;
+}
+
+export const THEMES: ThemeDef[] = [
+  { key: "herinnering", label: "Herinnering" },
+  { key: "identiteit", label: "Identiteit" },
+  { key: "eenzaamheid", label: "Eenzaamheid" },
+  { key: "tijd", label: "Tijd" },
+  { key: "klasse", label: "Klasse" },
+  { key: "verlangen", label: "Verlangen" },
+  { key: "lot", label: "Lot" },
+  { key: "dromen", label: "Dromen" },
+  { key: "technologie", label: "Technologie" },
+  { key: "geweld", label: "Geweld" },
+  { key: "familie", label: "Familie" },
+  { key: "hebzucht", label: "Hebzucht" },
+  { key: "geloof", label: "Geloof" },
+  { key: "verlies", label: "Verlies" },
+];
+
+export const THEME_LABEL: Record<string, string> = Object.fromEntries(THEMES.map((t) => [t.key, t.label]));
+export const THEME_KEY: Record<string, ThemeKey> = Object.fromEntries(THEMES.map((t) => [t.label, t.key]));
 
 export interface FeelDef {
   key: FeelKey;
@@ -35,7 +62,7 @@ export const WATCH_LEVELS: WatchLevel[] = [
 ];
 
 export const ONB_GENRES = ["Sci-Fi", "Drama", "Thriller", "Romance", "Crime", "Mystery", "Comedy", "Horror", "Documentaire", "Animatie"];
-export const ONB_THEMES = ["Herinnering", "Identiteit", "Eenzaamheid", "Tijd", "Klasse", "Verlangen", "Lot", "Dromen", "Technologie", "Geweld", "Familie", "Hebzucht", "Geloof", "Verlies"];
+export const ONB_THEMES = THEMES.map((t) => t.label);
 
 export interface BadgeDef {
   id: string;

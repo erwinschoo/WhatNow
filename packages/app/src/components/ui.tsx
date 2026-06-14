@@ -1,6 +1,6 @@
 /* Gedeelde UI-primitieven — geport uit het design (components.jsx). Inline-styles 1-op-1 behouden. */
 import type { CSSProperties, ReactNode } from "react";
-import type { CatalogFilm } from "../data/types";
+import type { CatalogFilm, FilmScores } from "../data/types";
 import type { FeelDef } from "../data/config";
 
 // ── Icons (lijn-glyphs, 24px grid, currentColor) ──────────────────────
@@ -78,11 +78,24 @@ export function Poster({ film, style, rounded = 14, showText = true, badge }: {
 }
 
 // ── Score pills (IMDB / RT / Metacritic) ──────────────────────────────
-export function ScorePill({ src, value, compact }: { src: "imdb" | "rt" | "mc"; value: number; compact?: boolean }) {
+export type ScoreSrc = "imdb" | "rt" | "mc" | "tmdb";
+
+/* Welke pills tonen we: IMDb/RT/Metacritic indien aanwezig (OMDb-verrijkt), anders TMDB-rating. */
+export function scoreEntries(scores: FilmScores): { src: ScoreSrc; value: number }[] {
+  const out: { src: ScoreSrc; value: number }[] = [];
+  if (scores.imdb) out.push({ src: "imdb", value: scores.imdb });
+  if (scores.rt) out.push({ src: "rt", value: scores.rt });
+  if (scores.mc) out.push({ src: "mc", value: scores.mc });
+  if (!out.length && scores.tmdb) out.push({ src: "tmdb", value: scores.tmdb });
+  return out;
+}
+
+export function ScorePill({ src, value, compact }: { src: ScoreSrc; value: number; compact?: boolean }) {
   const meta = {
     imdb: { tag: "IMDb", txt: "#f5c518", fmt: (v: number) => v.toFixed(1) },
     rt: { tag: "RT", txt: "#fa6f4d", fmt: (v: number) => v + "%" },
     mc: { tag: "MC", txt: "#9fd356", fmt: (v: number) => String(v) },
+    tmdb: { tag: "TMDB", txt: "#01b4e4", fmt: (v: number) => v.toFixed(1) },
   }[src];
   return (
     <div style={{ display: "inline-flex", alignItems: "center", gap: 6, padding: compact ? "4px 9px" : "6px 11px", borderRadius: 999, background: "var(--surface2)", border: "1px solid var(--line)" }}>
