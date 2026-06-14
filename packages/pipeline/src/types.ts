@@ -57,7 +57,8 @@ export interface RawFilm {
   voteCount: number;
 }
 
-/* Door Claude gegenereerde verrijking per film. */
+/* Verrijking per film — in-sessie door Claude gegenereerd en gecommit in enrichments.json
+ * (gekeyd op "Titel (jaar)"). Vervangt de betaalde API-call. */
 export interface Enrichment {
   feel: Feel;
   themes: string[];
@@ -67,4 +68,5 @@ export interface Enrichment {
   quiz: { q: string; options: string[]; answer: number; fact: string }[];
   grad: [string, string];
   ink: string;
+  cult?: boolean;
 }

@@ -1,91 +1,115 @@
-/* Orchestrator: seed → TMDB+OMDb → Claude-verrijking → embeddings/ketens → catalog.json.
- * Idempotent dankzij de bestand-cache; draai met `npm run build` (of `build:sample` voor ~10 films).
+/* Orchestrator: seed → OMDb (ruwe data + poster + scores) → verrijking uit enrichments.json
+ * (in-sessie door Claude gegenereerd, géén betaalde API) → embeddings/ketens → catalog.json.
  *
- * Stappen:
- *   01 seed       seed.json inlezen
- *   02 fetch      TMDB-details + OMDb-scores per film (gecached)
- *   03 enrich     Claude: feel/thema's/why/synopsis/trivia/quiz (gecached)
- *   04 embed      lokale embeddings → thematische keten (chain) per film
- *   05 bundle     catalog.json wegschrijven naar packages/app/public/data/
+ * TMDB is optioneel: staat er een TMDB_API_KEY, dan halen we daar betere poster/backdrop + keywords
+ * bij. Staat er een ANTHROPIC_API_KEY én ontbreekt de verrijking, dan valt het terug op de API.
+ * Idempotent dankzij de bestand-cache.
+ *
+ *   01 seed      seed.json
+ *   02 fetch     OMDb per film (gecached); optioneel TMDB-augmentatie
+ *   03 enrich    enrichments.json ("Titel (jaar)") — of API-fallback
+ *   04 embed     lokale embeddings → thematische keten per film
+ *   05 bundle    catalog.json → packages/app/public/data/
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { dirname, join } from "node:path";
 import { cached } from "./cache.js";
+import { getById, getByTitle } from "./omdb.js";
 import { findTmdbId, getDetails } from "./tmdb.js";
-import { getScores } from "./omdb.js";
 import { enrich } from "./enrich.js";
 import { computeChains } from "./embed.js";
-import type { Catalog, CatalogFilm, Enrichment, QuizQuestion, RawFilm } from "./types.js";
+import type { Catalog, CatalogFilm, Enrichment, QuizQuestion } from "./types.js";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
 const APP_DATA = join(ROOT, "..", "app", "public", "data");
 
-// .env laden (Node 20.12+).
 try {
   (process as any).loadEnvFile?.(join(ROOT, ".env"));
 } catch {
-  /* geen .env — keys moeten dan via de omgeving komen */
+  /* keys via omgeving */
 }
 
 const slug = (s: string) =>
   s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-
 const decadeOf = (year: number) => `${Math.floor(year / 10) * 10}s`;
 
-interface Seed { title: string; year?: number }
+interface Seed { id?: string; title: string; year?: number; imdbId?: string }
 
 async function main() {
   const limitArg = process.argv.indexOf("--limit");
   const limit = limitArg >= 0 ? Number(process.argv[limitArg + 1]) : Infinity;
+  const hasTmdb = !!process.env.TMDB_API_KEY;
+  const hasApi = !!process.env.ANTHROPIC_API_KEY;
 
   const seeds: Seed[] = JSON.parse(readFileSync(join(ROOT, "seed.json"), "utf-8"));
+  const enrichments: Record<string, Enrichment> = existsSync(join(ROOT, "enrichments.json"))
+    ? JSON.parse(readFileSync(join(ROOT, "enrichments.json"), "utf-8"))
+    : {};
   const selected = seeds.slice(0, limit);
-  console.log(`[01] ${selected.length} films in seed (van ${seeds.length}).`);
+  console.log(`[01] ${selected.length} films in seed${hasTmdb ? " · TMDB aan" : ""}${hasApi ? " · API-fallback aan" : ""}.`);
 
   const films: CatalogFilm[] = [];
+  const quizPool: QuizQuestion[] = [];
   const skipped: string[] = [];
 
   for (const seed of selected) {
-    const id = slug(`${seed.title}-${seed.year ?? ""}`).replace(/-+$/, "") || slug(seed.title);
+    const key = `${seed.title} (${seed.year ?? ""})`.replace(" ()", "");
+    const id = seed.id ?? (slug(`${seed.title}-${seed.year ?? ""}`) || slug(seed.title));
     try {
-      // 02 — fetch (gecached)
-      const tmdbId = await cached(`tmdbid-${id}`, () => findTmdbId(seed.title, seed.year));
-      if (!tmdbId) { skipped.push(`${seed.title} (geen TMDB-treffer)`); continue; }
-      const details = await cached(`details-${tmdbId}`, () => getDetails(tmdbId));
-      const scores = await cached(`omdb-${details.imdbId ?? tmdbId}`, () => getScores(details.imdbId));
+      // 03a — verrijking: bestand eerst, anders API-fallback (indien key), anders overslaan
+      let enr: Enrichment | undefined = enrichments[key];
+      if (!enr && !hasApi) { skipped.push(`${key} (geen verrijking in enrichments.json)`); continue; }
 
-      const raw: RawFilm = {
-        id, tmdbId, imdbId: details.imdbId, title: details.title, year: details.year || seed.year || 0,
-        dir: details.dir, runtime: details.runtime, genres: details.genres, keywords: details.keywords,
-        overview: details.overview, posterUrl: details.posterUrl, backdropUrl: details.backdropUrl,
-        scores, voteCount: details.voteCount,
-      };
+      // 02 — OMDb (gecached). IMDb-id is exact; titel-zoeken is fallback.
+      const raw = seed.imdbId
+        ? await cached(`omdb-id-${seed.imdbId}`, () => getById(seed.imdbId!))
+        : await cached(`omdb-title-${id}`, () => getByTitle(seed.title, seed.year));
+      if (!raw) { skipped.push(`${key} (geen OMDb-treffer)`); continue; }
 
-      // 03 — enrich (gecached)
-      const enr: Enrichment = await cached(`enrich-${id}`, () => enrich(raw));
+      // 02b — optionele TMDB-augmentatie (betere poster/backdrop + keywords)
+      let posterUrl = raw.posterUrl;
+      let backdropUrl: string | undefined;
+      let keywords: string[] = [];
+      if (hasTmdb) {
+        try {
+          const tmdbId = await cached(`tmdbid-${id}`, () => findTmdbId(seed.title, seed.year));
+          if (tmdbId) {
+            const d = await cached(`details-${tmdbId}`, () => getDetails(tmdbId));
+            posterUrl = d.posterUrl ?? posterUrl;
+            backdropUrl = d.backdropUrl;
+            keywords = d.keywords;
+          }
+        } catch { /* TMDB-augmentatie is best-effort */ }
+      }
+
+      // 03b — API-fallback als er geen bestand-verrijking is
+      if (!enr) {
+        enr = await cached(`enrich-${id}`, () =>
+          enrich({ id, tmdbId: 0, imdbId: raw.imdbId, title: raw.title, year: raw.year, dir: raw.dir,
+            runtime: raw.runtime, genres: raw.genres, keywords, overview: raw.plot, posterUrl,
+            backdropUrl, scores: raw.scores, voteCount: 0 }),
+        );
+      }
 
       films.push({
-        id, title: raw.title, year: raw.year, dir: raw.dir, runtime: raw.runtime,
-        genres: raw.genres, decade: decadeOf(raw.year),
-        cult: details.voteAverage >= 7.8 && details.voteCount > 0 && details.voteCount < 400000,
+        id, title: raw.title, year: raw.year || seed.year || 0, dir: raw.dir, runtime: raw.runtime,
+        genres: raw.genres, decade: decadeOf(raw.year || seed.year || 0), cult: enr.cult ?? false,
         themes: enr.themes, scores: raw.scores, feel: enr.feel, why: enr.why, synopsis: enr.synopsis,
-        trivia: enr.trivia, posterUrl: raw.posterUrl, backdropUrl: raw.backdropUrl,
-        grad: enr.grad, ink: enr.ink, chain: [],
+        trivia: enr.trivia, posterUrl, backdropUrl, grad: enr.grad, ink: enr.ink, chain: [],
       });
-      // Quiz-vragen bewaren we los, gekoppeld aan deze film-id.
       (enr.quiz ?? []).forEach((q) => quizPool.push({ ...q, film: id }));
-      console.log(`  ✓ ${raw.title} (${raw.year})`);
+      console.log(`  ✓ ${raw.title} (${raw.year})${posterUrl ? "" : " [geen poster]"}`);
     } catch (e) {
-      skipped.push(`${seed.title} (${e instanceof Error ? e.message : e})`);
+      skipped.push(`${key} (${e instanceof Error ? e.message : e})`);
     }
   }
 
   // 04 — embeddings → ketens
   console.log(`[04] Embeddings + ketens voor ${films.length} films…`);
   const chains = await computeChains(
-    films.map((f) => ({ id: f.id, text: `${f.title}. Thema's: ${f.themes.join(", ")}. ${f.synopsis} Keywords: ${f.genres.join(", ")}` })),
+    films.map((f) => ({ id: f.id, text: `${f.title}. Thema's: ${f.themes.join(", ")}. ${f.synopsis} Genres: ${f.genres.join(", ")}` })),
   );
   for (const f of films) f.chain = (chains[f.id] ?? []).filter((cid) => films.some((x) => x.id === cid));
 
@@ -94,17 +118,14 @@ async function main() {
   const catalog: Catalog = { version: Math.floor(Date.now() / 1000), films, quiz: quizPool };
   writeFileSync(join(APP_DATA, "catalog.json"), JSON.stringify(catalog), "utf-8");
 
-  console.log(`\n[05] Geschreven: ${join(APP_DATA, "catalog.json")}`);
-  console.log(`     ${films.length} films, ${quizPool.length} quizvragen.`);
+  console.log(`\n[05] Geschreven: ${join(APP_DATA, "catalog.json")} — ${films.length} films, ${quizPool.length} quizvragen.`);
   if (skipped.length) {
     console.log(`\n⚠ ${skipped.length} overgeslagen (niet stilzwijgend):`);
     skipped.forEach((s) => console.log(`   - ${s}`));
   }
-  const incomplete = films.filter((f) => !f.themes.length || !f.trivia.length || !f.posterUrl);
-  if (incomplete.length) console.log(`\n⚠ ${incomplete.length} films met onvolledige data: ${incomplete.map((f) => f.id).join(", ")}`);
+  const incomplete = films.filter((f) => !f.posterUrl);
+  if (incomplete.length) console.log(`\nℹ ${incomplete.length} films zonder poster (gradient-fallback): ${incomplete.map((f) => f.id).join(", ")}`);
 }
-
-const quizPool: QuizQuestion[] = [];
 
 main().catch((e) => {
   console.error(e);

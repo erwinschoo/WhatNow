@@ -28,8 +28,8 @@ function cspPlugin(): Plugin {
           "default-src 'self'",
           `script-src 'self' ${[...hashes].join(" ")}`.trim(),
           "style-src 'self' 'unsafe-inline'", // React inline-styles (style={{…}})
-          // img: posters van de TMDB-CDN, plus data/blob voor placeholders/profielfoto.
-          "img-src 'self' data: blob: https://image.tmdb.org",
+          // img: posters van TMDB-CDN en OMDb (Amazon), plus data/blob voor placeholders/profielfoto.
+          "img-src 'self' data: blob: https://image.tmdb.org https://m.media-amazon.com",
           // graph + login voor OneDrive-sync; de OneDrive-content-hosts zijn nodig omdat een
           // GET op bestandsinhoud bij een persoonlijk account 302-redirect naar een download-host.
           "connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com https://*.microsoftpersonalcontent.com https://*.dms.live.com https://*.sharepoint.com",
