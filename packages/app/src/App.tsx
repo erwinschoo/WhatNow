@@ -39,8 +39,10 @@ export default function App() {
   return (
     <div className="wn-shell">
       <div className="wn-root">
-        {/* Tab-schermen mounten pas zodra de catalogus geladen is (getCatalog() is dan veilig). */}
-        {catalogReady && (
+        {/* Tab-schermen mounten pas zodra de catalogus geladen is (getCatalog() is dan veilig) én
+            we niet in de onboarding/her-onboarding zitten — anders draait de zware feed onnodig
+            achter de wizard. */}
+        {catalogReady && onboarded && !reonboard && (
         <div style={{ position: "absolute", inset: 0, animation: t.reduceMotion ? "none" : "wnFade .3s" }} key={tab}>
           {tab === "discover" && <Discover />}
           {tab === "watchlist" && <Watchlist />}
