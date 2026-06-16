@@ -1,9 +1,23 @@
 import { execSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { readFileSync, mkdirSync } from "node:fs";
 import { createHash } from "node:crypto";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react";
 import { VitePWA } from "vite-plugin-pwa";
+
+/* Vite's dependency-cache (deps_temp_*) verhuizen naar de OS-tempmap wanneer het project onder
+ * OneDrive staat. OneDrive synct/vergrendelt anders node_modules/.vite, wat op Windows een
+ * `EPERM: rmdir` geeft zodra Vite z'n cache opnieuw opbouwt. Buiten OneDrive: Vite-default. */
+function resolveCacheDir(): string | undefined {
+  const here = fileURLToPath(new URL(".", import.meta.url));
+  if (!/onedrive/i.test(here)) return undefined;
+  const dir = join(tmpdir(), "whatnow-vite-cache");
+  try { mkdirSync(dir, { recursive: true }); } catch { /* bestaat al / niet kritiek */ }
+  return dir;
+}
 
 /* Injecteert een Content-Security-Policy als <meta> in de PRODUCTIE-build.
  * GitHub Pages kan geen HTTP-headers zetten, dus de CSP gaat in de HTML zelf.
@@ -60,6 +74,7 @@ function gitCommit(): string {
 
 export default defineConfig({
   base,
+  cacheDir: resolveCacheDir(),
   // Unieke dev-poort (zie ../../Projects/DEV-SERVERS.md). strictPort: faal hard bij bezetting
   // i.p.v. stilletjes een andere poort kiezen — anders klopt de MSAL-redirect-URI niet meer.
   server: { port: 5320, strictPort: true },

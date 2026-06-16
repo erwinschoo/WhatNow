@@ -19,38 +19,38 @@ function MiniStat({ label, value, sub }: { label: string; value: string | number
 }
 
 export function QuizHub() {
-  const { startQuiz, lastQuizScore } = useWN();
+  const { startQuiz, lastQuizScore, tr } = useWN();
   const { quiz } = getCatalog();
   return (
     <div className="wn-scroll" style={{ position: "absolute", inset: 0, padding: "60px 18px 100px" }}>
-      <Eyebrow>Speel & ontdek</Eyebrow>
-      <div style={{ fontFamily: "var(--sans)", fontWeight: 700, fontSize: 27, color: "var(--tx)", lineHeight: 1, marginTop: 3, marginBottom: 22 }}>Quiz</div>
+      <Eyebrow>{tr("Speel & ontdek")}</Eyebrow>
+      <div style={{ fontFamily: "var(--sans)", fontWeight: 700, fontSize: 27, color: "var(--tx)", lineHeight: 1, marginTop: 3, marginBottom: 22 }}>{tr("Quiz")}</div>
 
       <button onClick={() => startQuiz("all")} style={{ display: "block", width: "100%", textAlign: "left", cursor: "pointer", border: "1px solid var(--line2)", borderRadius: 22, padding: 22, position: "relative", overflow: "hidden", background: "linear-gradient(150deg, #2a1606, #120a04)" }}>
         <div style={{ position: "absolute", right: -30, top: -30, width: 150, height: 150, borderRadius: "50%", background: "radial-gradient(circle, rgba(255,138,43,0.32), transparent 70%)" }} />
-        <div style={{ fontFamily: "var(--mono)", fontSize: 10, letterSpacing: 1.5, color: "var(--amber2)" }}>DAGELIJKSE QUIZ</div>
-        <div style={{ fontFamily: "var(--sans)", fontWeight: 700, fontSize: 24, color: "#fff", marginTop: 8, lineHeight: 1.05 }}>Hoe goed ken jij<br />de cinema?</div>
-        <div style={{ fontFamily: "var(--sans)", fontSize: 13.5, color: "rgba(255,255,255,0.7)", marginTop: 10 }}>{quiz.length} vragen · trivia per film · amber-feedback</div>
-        <div style={{ marginTop: 18 }}><GlowButton size="m" icon="play">Start quiz</GlowButton></div>
+        <div style={{ fontFamily: "var(--mono)", fontSize: 10, letterSpacing: 1.5, color: "var(--amber2)" }}>{tr("DAGELIJKSE QUIZ")}</div>
+        <div style={{ fontFamily: "var(--sans)", fontWeight: 700, fontSize: 24, color: "#fff", marginTop: 8, lineHeight: 1.05 }}>{tr("Hoe goed ken jij de cinema?")}</div>
+        <div style={{ fontFamily: "var(--sans)", fontSize: 13.5, color: "rgba(255,255,255,0.7)", marginTop: 10 }}>{tr("{n} vragen · trivia per film · amber-feedback", { n: quiz.length })}</div>
+        <div style={{ marginTop: 18 }}><GlowButton size="m" icon="play">{tr("Start quiz")}</GlowButton></div>
       </button>
 
       <div style={{ display: "flex", gap: 11, marginTop: 16 }}>
-        <MiniStat label="Beste reeks" value="9" sub="op rij goed" />
-        <MiniStat label="Gemiddelde" value={(lastQuizScore != null ? lastQuizScore : 84) + "%"} sub="laatste 7" />
+        <MiniStat label={tr("Beste reeks")} value="9" sub={tr("op rij goed")} />
+        <MiniStat label={tr("Gemiddelde")} value={(lastQuizScore != null ? lastQuizScore : 84) + "%"} sub={tr("laatste 7")} />
       </div>
 
-      <Eyebrow style={{ marginTop: 26, marginBottom: 12 }}>Themaquizzen</Eyebrow>
+      <Eyebrow style={{ marginTop: 26, marginBottom: 12 }}>{tr("Themaquizzen")}</Eyebrow>
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
         {[
-          { t: "Trivia uit je watchlist", s: "klaar om te spelen", ic: "bookmark" },
+          { t: "Trivia uit je watchlist", s: "12 films klaar", ic: "bookmark" },
           { t: "Decennium-duel · 2000s", s: "Plaats de films op tijd", ic: "clock" },
           { t: "Raad de regisseur", s: "Aan beeld & stijl", ic: "film" },
         ].map((row) => (
           <button key={row.t} onClick={() => startQuiz("all")} style={{ display: "flex", alignItems: "center", gap: 13, background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 14, cursor: "pointer", textAlign: "left" }}>
             <div style={{ width: 40, height: 40, borderRadius: 11, background: "rgba(255,138,43,0.12)", color: "var(--amber2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}><Icon name={row.ic} size={21} /></div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontFamily: "var(--sans)", fontWeight: 600, fontSize: 15, color: "var(--tx)" }}>{row.t}</div>
-              <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--tx3)", marginTop: 2 }}>{row.s}</div>
+              <div style={{ fontFamily: "var(--sans)", fontWeight: 600, fontSize: 15, color: "var(--tx)" }}>{tr(row.t)}</div>
+              <div style={{ fontFamily: "var(--mono)", fontSize: 10, color: "var(--tx3)", marginTop: 2 }}>{tr(row.s)}</div>
             </div>
             <Icon name="chevron" size={18} style={{ color: "var(--tx3)" }} />
           </button>
@@ -83,6 +83,7 @@ function TapOptions({ q, picked, correct, onPick }: { q: QuizQuestion; picked: n
 }
 
 function SwipeOptions({ q, picked, onPick }: { q: QuizQuestion; picked: number | null; onPick: (i: number) => void }) {
+  const { tr } = useWN();
   const [top, setTop] = useState(0);
   const order = useRef(q.options.map((_, i) => i));
   const [dx, setDx] = useState(0);
@@ -90,7 +91,7 @@ function SwipeOptions({ q, picked, onPick }: { q: QuizQuestion; picked: number |
   if (picked != null) {
     return (
       <div style={{ textAlign: "center", padding: 10 }}>
-        <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: "var(--tx3)", letterSpacing: 1 }}>JOUW ANTWOORD</div>
+        <div style={{ fontFamily: "var(--mono)", fontSize: 10.5, color: "var(--tx3)", letterSpacing: 1 }}>{tr("JOUW ANTWOORD")}</div>
         <div style={{ fontFamily: "var(--sans)", fontWeight: 700, fontSize: 18, color: picked === q.answer ? "var(--amber2)" : "#ff9b8f", marginTop: 6 }}>{q.options[picked]}</div>
       </div>
     );
@@ -136,20 +137,20 @@ function SwipeOptions({ q, picked, onPick }: { q: QuizQuestion; picked: number |
 function QuizResult({ score, total, onClose, questions }: { score: number; total: number; onClose: (retry?: boolean) => void; questions: QuizQuestion[] }) {
   const pct = Math.round((score / total) * 100);
   const tier = pct === 100 ? { t: "Perfecte score!", b: "Quizmeester", ic: "star" } : pct >= 60 ? { t: "Knap gedaan", b: "Cinefiel in opmars", ic: "film" } : { t: "Blijf kijken", b: "Leerling", ic: "eye" };
-  const { saveQuizScore } = useWN();
+  const { saveQuizScore, tr } = useWN();
   const { byId } = getCatalog();
   useEffect(() => { saveQuizScore(pct); }, []); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div className="wn-scroll" style={{ position: "absolute", inset: 0, background: "radial-gradient(700px 500px at 50% 8%, rgba(255,138,43,0.18), transparent 60%), var(--bg)", zIndex: 50, display: "flex", flexDirection: "column", alignItems: "center", animation: "wnFade .3s", padding: "70px 22px 24px" }}>
-      <Eyebrow>{tier.t}</Eyebrow>
+      <Eyebrow>{tr(tier.t)}</Eyebrow>
       <div style={{ position: "relative", marginTop: 22, animation: "wnPop .5s" }}>
         <StatRing pct={score / total} size={172} stroke={12} value={`${score}/${total}`} sub={`${pct}%`} />
       </div>
       <div style={{ display: "inline-flex", alignItems: "center", gap: 9, marginTop: 26, padding: "10px 18px", borderRadius: 999, background: "linear-gradient(120deg, var(--amber1), var(--amber2))", color: "#1a0e02", boxShadow: "0 8px 26px rgba(255,138,43,0.4)" }}>
-        <Icon name={tier.ic} size={20} fill="#1a0e02" /><span style={{ fontFamily: "var(--sans)", fontWeight: 700, fontSize: 15 }}>{tier.b}</span>
+        <Icon name={tier.ic} size={20} fill="#1a0e02" /><span style={{ fontFamily: "var(--sans)", fontWeight: 700, fontSize: 15 }}>{tr(tier.b)}</span>
       </div>
       <div style={{ width: "100%", marginTop: 30 }}>
-        <Eyebrow style={{ marginBottom: 12 }}>Wat je leerde</Eyebrow>
+        <Eyebrow style={{ marginBottom: 12 }}>{tr("Wat je leerde")}</Eyebrow>
         <div style={{ display: "flex", flexDirection: "column", gap: 9 }}>
           {questions.map((q, i) => (
             <div key={i} style={{ display: "flex", gap: 11, background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 12, padding: 11 }}>
@@ -160,8 +161,8 @@ function QuizResult({ score, total, onClose, questions }: { score: number; total
         </div>
       </div>
       <div style={{ display: "flex", gap: 10, width: "100%", marginTop: 22 }}>
-        <GlowButton size="m" variant="ghost" icon="refresh" full onClick={() => onClose(true)}>Opnieuw</GlowButton>
-        <GlowButton size="m" full icon="check" onClick={() => onClose(false)}>Klaar</GlowButton>
+        <GlowButton size="m" variant="ghost" icon="refresh" full onClick={() => onClose(true)}>{tr("Opnieuw")}</GlowButton>
+        <GlowButton size="m" full icon="check" onClick={() => onClose(false)}>{tr("Klaar")}</GlowButton>
       </div>
       <div style={{ height: 20 }} />
     </div>
@@ -169,7 +170,7 @@ function QuizResult({ score, total, onClose, questions }: { score: number; total
 }
 
 export function QuizFlow() {
-  const { t, quizScope, endQuiz } = useWN();
+  const { t, tr, quizScope, endQuiz } = useWN();
   const { quiz } = getCatalog();
   const questions = (() => {
     if (quizScope && quizScope !== "all") { const f = quiz.filter((q) => q.film === quizScope); if (f.length) return f; }
@@ -207,7 +208,7 @@ export function QuizFlow() {
       </div>
 
       <div className="wn-scroll" style={{ flex: 1, padding: "28px 20px 16px", display: "flex", flexDirection: "column" }}>
-        <Eyebrow>Vraag {i + 1}</Eyebrow>
+        <Eyebrow>{tr("Vraag {n}", { n: i + 1 })}</Eyebrow>
         <div style={{ fontFamily: "var(--sans)", fontWeight: 700, fontSize: 25, lineHeight: 1.15, color: "var(--tx)", marginTop: 10 }}>{q.q}</div>
 
         <div style={{ flex: 1 }} />
@@ -220,16 +221,16 @@ export function QuizFlow() {
           <div style={{ marginTop: 18, animation: "wnFadeUp .3s" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 9, marginBottom: 10 }}>
               <div style={{ width: 30, height: 30, borderRadius: "50%", background: correct ? "linear-gradient(120deg, var(--amber1), var(--amber2))" : "var(--surface3)", color: correct ? "#1a0e02" : "var(--tx2)", display: "flex", alignItems: "center", justifyContent: "center" }}><Icon name={correct ? "check" : "close"} size={18} stroke={2.4} /></div>
-              <span style={{ fontFamily: "var(--sans)", fontWeight: 700, fontSize: 16, color: correct ? "var(--amber2)" : "var(--tx)" }}>{correct ? "Goed!" : "Helaas"}</span>
+              <span style={{ fontFamily: "var(--sans)", fontWeight: 700, fontSize: 16, color: correct ? "var(--amber2)" : "var(--tx)" }}>{correct ? tr("Goed!") : tr("Helaas")}</span>
             </div>
             <div style={{ background: "var(--surface)", border: "1px solid var(--line)", borderRadius: 14, padding: 14, display: "flex", gap: 11 }}>
               {getCatalog().byId[q.film] && <div style={{ width: 38, height: 56, flexShrink: 0, borderRadius: 8 }}><Poster film={getCatalog().byId[q.film]} showText={false} rounded={8} /></div>}
               <div>
-                <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, letterSpacing: 1, color: "var(--amber2)" }}>WIST JE DAT?</div>
+                <div style={{ fontFamily: "var(--mono)", fontSize: 9.5, letterSpacing: 1, color: "var(--amber2)" }}>{tr("WIST JE DAT?")}</div>
                 <div style={{ fontFamily: "var(--sans)", fontSize: 13, lineHeight: 1.4, color: "var(--tx2)", marginTop: 5 }}>{q.fact}</div>
               </div>
             </div>
-            <div style={{ marginTop: 14 }}><GlowButton size="l" full icon="chevron" onClick={next}>{i < questions.length - 1 ? "Volgende vraag" : "Naar uitslag"}</GlowButton></div>
+            <div style={{ marginTop: 14 }}><GlowButton size="l" full icon="chevron" onClick={next}>{i < questions.length - 1 ? tr("Volgende vraag") : tr("Naar uitslag")}</GlowButton></div>
           </div>
         )}
       </div>

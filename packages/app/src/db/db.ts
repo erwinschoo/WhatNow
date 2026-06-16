@@ -3,9 +3,11 @@
  * snapshot naar OneDrive syncen. useLiveQuery zorgt voor reactiviteit. */
 import Dexie, { type Table } from "dexie";
 import type { Feel } from "../data/types";
+import type { LangId } from "../i18n/dict";
 
 export interface AppState {
   onboarded: boolean;
+  lang: LangId; // UI-taal; bronstrings zijn NL
   level: string | null;
   favoriteGenres: string[];
   favoriteThemes: string[];
@@ -20,6 +22,7 @@ export interface AppState {
 
 export const DEFAULT_STATE: AppState = {
   onboarded: false,
+  lang: "nl",
   level: null,
   favoriteGenres: [],
   favoriteThemes: [],

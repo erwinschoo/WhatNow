@@ -4,6 +4,13 @@ Een gratis Progressive Web App die diepe, **thematische** filmsuggesties geeft ‚
 "feel"-sliders (cinematografie, intrige, humor, emotionele diepte, tempo), met quizzes en trivia.
 Sleek zwart design met een warm amber-accent. Tweede app in de gratis "franchise" na bokkiep.
 
+## Licentie & gebruik
+
+WhatNow is **source-available, niet-commercieel**, onder de
+[PolyForm Noncommercial License 1.0.0](LICENSE). Je mag de code vrij inzien, auditen,
+aanpassen en zelf priv√© (niet-commercieel) draaien. Commercieel gebruik door derden is
+niet toegestaan.
+
 ## Structuur (monorepo)
 
 ```

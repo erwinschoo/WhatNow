@@ -63,10 +63,26 @@ async function fetchJson<T>(url: string, cache: RequestCache): Promise<T | null>
   }
 }
 
+export type BootMode = "fetch" | "update" | "check";
+
+/* Bepaalt — vóór de eventuele grote download — welke splash-modus past:
+ *   geen lokale versie        → 'fetch'  (eerste keer / verse cache nodig)
+ *   meta-versie ≠ lokaal       → 'update' (nieuwe catalogus beschikbaar)
+ *   gelijk / meta onbereikbaar → 'check'  (niets te doen; korte controle)
+ * Doet alleen de lichte meta-fetch, niet de volledige catalog.json. */
+export async function decideBootMode(): Promise<BootMode> {
+  const local = await localVersion();
+  if (local === null) return "fetch";
+  const meta = await fetchJson<CatalogMeta>(META_URL, "no-store");
+  if (meta && meta.version !== local) return "update";
+  return "check";
+}
+
 let loaded: LoadedCatalog | null = null;
 
-export async function loadCatalog(): Promise<LoadedCatalog> {
-  if (loaded) return loaded;
+export async function loadCatalog(force = false): Promise<LoadedCatalog> {
+  if (loaded && !force) return loaded;
+  if (force) loaded = null; // verse versiecheck afdwingen (bv. "Controleer op updates")
 
   const meta = await fetchJson<CatalogMeta>(META_URL, "no-store");
   const local = await localVersion();

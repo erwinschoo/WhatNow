@@ -2,6 +2,8 @@
 import type { CSSProperties, ReactNode } from "react";
 import type { CatalogFilm, FilmScores } from "../data/types";
 import type { FeelDef } from "../data/config";
+import { useWN } from "../state/AppContext";
+import { tmdbImage, type TmdbSize } from "../utils/img";
 
 // ── Icons (lijn-glyphs, 24px grid, currentColor) ──────────────────────
 export function Icon({ name, size = 24, stroke = 1.8, fill = "none", style }: {
@@ -23,7 +25,7 @@ export function Icon({ name, size = 24, stroke = 1.8, fill = "none", style }: {
     heart: <path d="M12 20s-7-4.6-7-9.3A3.7 3.7 0 0 1 12 8a3.7 3.7 0 0 1 7-1.3C19 11.4 12 20 12 20z" {...p} fill={fill} />,
     share: <><circle cx="6" cy="12" r="2.2" {...p} /><circle cx="17" cy="6" r="2.2" {...p} /><circle cx="17" cy="18" r="2.2" {...p} /><path d="M8 11l7-4M8 13l7 4" {...p} /></>,
     chevron: <path d="M9 6l6 6-6 6" {...p} />,
-    settings: <><circle cx="12" cy="12" r="3" {...p} /><path d="M12 3v2.5M12 18.5V21M4.2 7l2.2 1.3M17.6 15.7l2.2 1.3M4.2 17l2.2-1.3M17.6 8.3l2.2-1.3" {...p} /></>,
+    settings: <><circle cx="12" cy="12" r="3.1" {...p} /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" {...p} /></>,
     cloud: <path d="M7 18a4 4 0 0 1-.5-8A5 5 0 0 1 16 9.5 3.5 3.5 0 0 1 17 18z" {...p} />,
     refresh: <><path d="M4 12a8 8 0 0 1 13.7-5.6L20 8" {...p} /><path d="M20 4v4h-4" {...p} /><path d="M20 12a8 8 0 0 1-13.7 5.6L4 16" {...p} /><path d="M4 20v-4h4" {...p} /></>,
     film: <><rect x="4" y="5" width="16" height="14" rx="2" {...p} /><path d="M9 5v14M15 5v14M4 9.7h5M15 9.7h5M4 14.3h5M15 14.3h5" {...p} /></>,
@@ -46,8 +48,8 @@ export function Icon({ name, size = 24, stroke = 1.8, fill = "none", style }: {
 }
 
 // ── Poster (echte TMDB-poster indien aanwezig, anders gradient-placeholder) ──
-export function Poster({ film, style, rounded = 14, showText = true, badge }: {
-  film: CatalogFilm; style?: CSSProperties; rounded?: number; showText?: boolean; badge?: ReactNode;
+export function Poster({ film, style, rounded = 14, showText = true, badge, size = "w342" }: {
+  film: CatalogFilm; style?: CSSProperties; rounded?: number; showText?: boolean; badge?: ReactNode; size?: TmdbSize;
 }) {
   const [a, b] = film.grad;
   return (
@@ -56,7 +58,7 @@ export function Poster({ film, style, rounded = 14, showText = true, badge }: {
       background: `linear-gradient(150deg, ${a}, ${b})`, ...style,
     }}>
       {film.posterUrl && (
-        <img src={film.posterUrl} alt="" loading="lazy"
+        <img src={tmdbImage(film.posterUrl, size)} alt="" loading="lazy" decoding="async"
           style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover" }} />
       )}
       {/* film-grain + glans */}
@@ -162,10 +164,11 @@ export function GlowButton({ children, onClick, variant = "amber", size = "m", i
 
 // ── Feel slider (0–10, amber fill + glow thumb) ───────────────────────
 export function FeelSlider({ feel, value, onChange }: { feel: FeelDef; value: number; onChange: (v: number) => void }) {
+  const { tr } = useWN();
   return (
     <div style={{ padding: "2px 0" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 9 }}>
-        <span style={{ fontFamily: "var(--sans)", fontWeight: 600, fontSize: 14.5, color: "var(--tx)" }}>{feel.label}</span>
+        <span style={{ fontFamily: "var(--sans)", fontWeight: 600, fontSize: 14.5, color: "var(--tx)" }}>{tr(feel.label)}</span>
         <span style={{ fontFamily: "var(--mono)", fontWeight: 700, fontSize: 13, color: "var(--amber2)" }}>{value}</span>
       </div>
       <div style={{ position: "relative", height: 24, display: "flex", alignItems: "center" }}>
@@ -176,8 +179,8 @@ export function FeelSlider({ feel, value, onChange }: { feel: FeelDef; value: nu
         <div style={{ position: "absolute", left: `calc(${value * 10}% - 11px)`, width: 22, height: 22, borderRadius: "50%", background: "#fff", border: "3px solid var(--amber)", boxShadow: "0 0 14px rgba(255,138,43,0.55)", pointerEvents: "none" }} />
       </div>
       <div style={{ display: "flex", justifyContent: "space-between", marginTop: 5 }}>
-        <span style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: "var(--tx3)" }}>{feel.lo}</span>
-        <span style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: "var(--tx3)" }}>{feel.hi}</span>
+        <span style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: "var(--tx3)" }}>{tr(feel.lo)}</span>
+        <span style={{ fontFamily: "var(--mono)", fontSize: 9.5, color: "var(--tx3)" }}>{tr(feel.hi)}</span>
       </div>
     </div>
   );

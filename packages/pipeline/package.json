@@ -3,6 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "license": "LicenseRef-PolyForm-Noncommercial-1.0.0",
   "description": "Offline build-pipeline: TMDB+OMDb ophalen, Claude verrijken (feel/thema's/trivia/quiz), embeddings + thematische ketens, en alles bundelen tot app/public/data/catalog.json.",
   "scripts": {
     "build": "tsx src/build.ts",

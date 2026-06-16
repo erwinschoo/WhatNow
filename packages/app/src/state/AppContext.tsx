@@ -1,10 +1,13 @@
 /* Centrale app-context (geport uit app.jsx). Navigatie/overlay-state is efemeer (useState);
  * persistente state (onboarding, watchlist, gezien, feel-voorkeuren, quizscores, seed) leeft in
  * Dexie en wordt reactief gelezen via useLiveQuery. Mutaties schrijven via patchState. */
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import type { Feel } from "../data/types";
 import { DEFAULT_STATE, getState, patchState, type AppState } from "../db/db";
+import type { LangId } from "../i18n/dict";
+import { makeTr, type Tr } from "../i18n/i18n";
+import { decideBootMode, type BootMode } from "../data/catalog";
 
 /* Vaste design-keuzes (voorheen het Tweaks-panel uit het prototype). */
 export const TWEAKS = {
@@ -19,6 +22,17 @@ export type TabId = "discover" | "watchlist" | "quiz" | "profile";
 
 export interface WNContext {
   t: typeof TWEAKS;
+  // i18n
+  lang: LangId;
+  tr: Tr;
+  setLang: (l: LangId) => void;
+  // boot / splash
+  catalogReady: boolean;
+  boot: { mode: BootMode } | null;
+  checkUpdates: () => void;
+  // her-onboarding
+  reonboard: boolean;
+  cancelOnboarding: () => void;
   // persistente state
   onboarded: boolean;
   watchlist: string[];
@@ -58,6 +72,7 @@ export interface WNContext {
   setTuneFacets: (f: AppState["tuneFacets"]) => void;
   finishOnboarding: (p: { level: string; genres: string[]; themes: string[] }) => void;
   resetOnboarding: () => void;
+  endBoot: () => void;
 }
 
 const WN = createContext<WNContext | null>(null);
@@ -83,12 +98,42 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [searchOpen, setSearchOpen] = useState(false);
   const [quizActive, setQuizActive] = useState(false);
   const [quizScope, setQuizScope] = useState("all");
+  const [catalogReady, setCatalogReady] = useState(false);
+  const [boot, setBoot] = useState<{ mode: BootMode } | null>(null);
+  const [reonboard, setReonboard] = useState(false);
 
+  /* Koude start (één keer): toon ALTIJD eerst de Splash en laad de catalogus volledig vóórdat we
+   * de gebruiker doorlaten. De onboarding-beslissing is een simpele check op de lokale
+   * IndexedDB-record (getState), niet op de live-default — zo flitst de wizard nooit even op
+   * mobiel. De Splash laadt de catalogus en zet via onDone (endBoot) → catalogReady. */
+  const bootedOnce = useRef(false);
+  useEffect(() => {
+    if (bootedOnce.current) return;
+    bootedOnce.current = true;
+    void (async () => {
+      const s = await getState();
+      const mode: BootMode = s.onboarded ? await decideBootMode() : "fetch";
+      setBoot({ mode });
+    })();
+  }, []);
+
+  const tr = makeTr(state.lang);
   const quizScores = state.quizScores ?? [];
   const lastQuizScore = quizScores.length ? quizScores[quizScores.length - 1].pct : null;
 
   const ctx: WNContext = {
     t: TWEAKS,
+    lang: state.lang,
+    tr,
+    setLang: (l) => { void patchState({ lang: l }); },
+    catalogReady,
+    boot,
+    checkUpdates: () => {
+      setSettingsOpen(false);
+      void decideBootMode().then((mode) => setBoot({ mode }));
+    },
+    reonboard,
+    cancelOnboarding: () => setReonboard(false),
     onboarded: state.onboarded,
     watchlist: state.watchlist,
     seen: state.seen,
@@ -132,9 +177,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setTuneFacets: (f) => { void patchState({ tuneFacets: f }); },
     finishOnboarding: (p) => {
       void patchState({ onboarded: true, level: p.level, favoriteGenres: p.genres, favoriteThemes: p.themes });
+      setReonboard(false);
       setTab("discover");
+      setBoot({ mode: "fetch" });
     },
-    resetOnboarding: () => { setSettingsOpen(false); void patchState({ onboarded: false }); },
+    /* Start de wizard opnieuw zónder het profiel te wissen; `reonboard` toont de annuleren-knop
+     * en laat `onboarded` staan, zodat annuleren netjes terugkeert. */
+    resetOnboarding: () => { setSettingsOpen(false); setReonboard(true); },
+    endBoot: () => { setCatalogReady(true); setBoot(null); },
   };
 
   return <WN.Provider value={ctx}>{children}</WN.Provider>;
