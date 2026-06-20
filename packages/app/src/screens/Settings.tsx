@@ -66,7 +66,10 @@ export function Settings() {
     try {
       const out = await syncNow();
       setSynced(await lastSyncedAt());
-      setMsg(out === "pulled" ? "Data opgehaald van OneDrive." : "Gesynchroniseerd.");
+      setMsg(out === "pulled" ? "Data opgehaald van OneDrive."
+        : out === "merged" ? "Samengevoegd met je andere apparaten."
+        : out === "noop" ? "Alles is al up-to-date."
+        : "Gesynchroniseerd.");
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Sync mislukt.");
     } finally { setBusy(false); }

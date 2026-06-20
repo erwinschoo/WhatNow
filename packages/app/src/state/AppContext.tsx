@@ -8,6 +8,7 @@ import { DEFAULT_STATE, getState, patchState, type AppState } from "../db/db";
 import type { LangId } from "../i18n/dict";
 import { makeTr, type Tr } from "../i18n/i18n";
 import { decideBootMode, type BootMode } from "../data/catalog";
+import { scheduleSync } from "../sync/syncEngine";
 
 /* Vaste design-keuzes (voorheen het Tweaks-panel uit het prototype). */
 export const TWEAKS = {
@@ -128,6 +129,33 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setFirstRun(false);
       setBoot({ mode: await decideBootMode() });
     })();
+  }, []);
+
+  /* Auto-sync: na een lokale mutatie (updatedAt verandert) plannen we — als sync is ingesteld — een
+   * gedebouncede stille push/merge naar OneDrive. De eerste waarneming (mount/boot) slaan we over;
+   * de boot-pull in de Splash dekt dat al. */
+  const lastSyncedUpdatedAt = useRef<string | null>(null);
+  useEffect(() => {
+    if (!state.syncEnabled) return;
+    if (lastSyncedUpdatedAt.current === null) { lastSyncedUpdatedAt.current = state.updatedAt; return; }
+    if (lastSyncedUpdatedAt.current === state.updatedAt) return;
+    lastSyncedUpdatedAt.current = state.updatedAt;
+    scheduleSync();
+  }, [state.updatedAt, state.syncEnabled]);
+
+  /* Pull-merge bij terugkeer naar de app (een ander toestel/tab kan intussen hebben gesynct). */
+  const syncEnabledRef = useRef(state.syncEnabled);
+  syncEnabledRef.current = state.syncEnabled;
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible" && syncEnabledRef.current) scheduleSync(400);
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", onVisible);
+    return () => {
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", onVisible);
+    };
   }, []);
 
   const tr = makeTr(state.lang);
