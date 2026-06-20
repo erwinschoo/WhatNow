@@ -4,6 +4,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useWN } from "../state/AppContext";
 import { loadCatalog, type BootMode } from "../data/catalog";
+import { trySilentSync } from "../sync/syncEngine";
 
 interface Step { msg: string; dur: number; p: [number, number]; }
 
@@ -25,7 +26,7 @@ const SPLASH_SCRIPTS: Record<BootMode, Step[]> = {
 const C = 2 * Math.PI * 44;
 
 export function Splash({ mode, onDone }: { mode: BootMode; onDone: () => void }) {
-  const { tr, t } = useWN();
+  const { tr, t, syncEnabled } = useWN();
   const steps = SPLASH_SCRIPTS[mode] ?? SPLASH_SCRIPTS.check;
   const [pct, setPct] = useState(0);
   const [stage, setStage] = useState(0);
@@ -42,9 +43,18 @@ export function Splash({ mode, onDone }: { mode: BootMode; onDone: () => void })
     const start = Date.now();
 
     // Echt werk: alleen 'update' forceert een verse versiecheck/download. 'fetch' (eerste load) en
-    // 'check' gebruiken de gewone (gememoïseerde) load. De splash wacht op zowel dit als de
-    // gescripte minimum-duur.
-    const realWork = loadCatalog(mode === "update").catch(() => {});
+    // 'check' gebruiken de gewone (gememoïseerde) load. Daarna — als OneDrive-sync is ingesteld —
+    // een stille pull/push vóór Ontdek; nooit een popup, met een timeout-vangnet zodat een trage
+    // of offline OneDrive de boot niet ophoudt. De splash wacht op dit geheel én de gescripte duur.
+    const realWork = (async () => {
+      await loadCatalog(mode === "update").catch(() => {});
+      if (syncEnabled) {
+        await Promise.race([
+          trySilentSync().catch(() => null),
+          new Promise((r) => setTimeout(r, 4000)),
+        ]);
+      }
+    })();
 
     const iv = setInterval(() => {
       if (cancelled) return;

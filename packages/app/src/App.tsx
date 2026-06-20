@@ -23,7 +23,7 @@ const TABS = [
 
 export default function App() {
   const ctx = useWN();
-  const { t, tr, tab, setTab, onboarded, reonboard, catalogReady, boot, endBoot, filmId, quizActive, settingsOpen, searchOpen, tuneOpen, seed } = ctx;
+  const { t, tr, tab, setTab, onboarded, reonboard, catalogReady, boot, firstRun, endBoot, filmId, quizActive, settingsOpen, searchOpen, tuneOpen, seed } = ctx;
   const [installAvail, setInstallAvail] = useState(canInstall());
   const [showInstall, setShowInstall] = useState(false);
 
@@ -34,15 +34,15 @@ export default function App() {
     return () => clearTimeout(id);
   }, [onboarded, installAvail]);
 
-  const fullOverlay = !onboarded || reonboard || !!filmId || quizActive || settingsOpen || searchOpen;
+  const fullOverlay = firstRun === true || reonboard || !!filmId || quizActive || settingsOpen || searchOpen;
 
   return (
     <div className="wn-shell">
       <div className="wn-root">
         {/* Tab-schermen mounten pas zodra de catalogus geladen is (getCatalog() is dan veilig) én
             we niet in de onboarding/her-onboarding zitten — anders draait de zware feed onnodig
-            achter de wizard. */}
-        {catalogReady && onboarded && !reonboard && (
+            achter de wizard. firstRun === false betekent: boot-beslissing genomen én ge-onboard. */}
+        {catalogReady && firstRun === false && !reonboard && (
         <div style={{ position: "absolute", inset: 0, animation: t.reduceMotion ? "none" : "wnFade .3s" }} key={tab}>
           {tab === "discover" && <Discover />}
           {tab === "watchlist" && <Watchlist />}
@@ -87,12 +87,13 @@ export default function App() {
         {catalogReady && settingsOpen && <Settings />}
         {catalogReady && searchOpen && <Search />}
         {catalogReady && quizActive && <QuizFlow />}
-        {/* Wizard pas tonen als de catalogus geladen is — anders flitst hij even op mobiel terwijl
-            de boot-beslissing en het laden nog lopen. */}
-        {catalogReady && (!onboarded || reonboard) && <Onboarding />}
-        {/* Pre-splash: dekt de korte gap vóórdat het boot-effect de modus heeft bepaald, zodat er
-            nooit een leeg of fout scherm verschijnt. */}
-        {!catalogReady && !boot && <div style={{ position: "absolute", inset: 0, zIndex: 70, background: "var(--bg)" }} />}
+        {/* Wizard: eerste run (firstRun) toont 'm meteen — die laadt de catalogus zélf in z'n laatste
+            stap. Her-onboarding (reonboard) toont 'm over de al-geladen app. */}
+        {(firstRun === true || reonboard) && <Onboarding />}
+        {/* Pre-splash: dekt de korte gap vóórdat het boot-effect de modus heeft bepaald (firstRun
+            nog null, of ge-onboard maar de versiecheck loopt nog), zodat er nooit een leeg of fout
+            scherm verschijnt. */}
+        {!catalogReady && !boot && firstRun !== true && !reonboard && <div style={{ position: "absolute", inset: 0, zIndex: 70, background: "var(--bg)" }} />}
         {boot && <Splash mode={boot.mode} onDone={endBoot} />}
       </div>
     </div>

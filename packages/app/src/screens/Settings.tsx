@@ -37,7 +37,7 @@ function SettingsGroup({ header, rows, tr }: { header: string; rows: { t: string
 }
 
 export function Settings() {
-  const { closeSettings, resetOnboarding, lang, setLang, tr, checkUpdates } = useWN();
+  const { closeSettings, resetOnboarding, lang, setLang, tr, checkUpdates, setSyncEnabled } = useWN();
   const configured = isSyncConfigured();
   const [account, setAccount] = useState(() => getAccount());
   const [busy, setBusy] = useState(false);
@@ -54,6 +54,7 @@ export function Settings() {
       await signIn();
       setAccount(getAccount());
       await syncNow();
+      setSyncEnabled(true); // → stille pull bij volgende herstart
       setSynced(await lastSyncedAt());
     } catch (e) {
       setMsg(e instanceof Error ? e.message : "Verbinden mislukt.");
@@ -73,7 +74,7 @@ export function Settings() {
 
   const disconnect = async () => {
     setBusy(true);
-    try { await signOut(); setAccount(null); setSynced(null); } finally { setBusy(false); }
+    try { await signOut(); setSyncEnabled(false); setAccount(null); setSynced(null); } finally { setBusy(false); }
   };
 
   const isConnected = !!account;

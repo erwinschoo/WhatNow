@@ -17,6 +17,7 @@ export interface AppState {
   tuneFacets: { genres: string[]; decades: string[]; cult: boolean };
   quizScores: { pct: number; at: string }[];
   seed: string | null;
+  syncEnabled: boolean; // OneDrive-sync ingesteld (bij onboarding of via Settings) → stille pull bij herstart
   updatedAt: string; // ISO — gebruikt voor sync-conflictbeslissingen
 }
 
@@ -32,6 +33,7 @@ export const DEFAULT_STATE: AppState = {
   tuneFacets: { genres: [], decades: [], cult: false },
   quizScores: [],
   seed: null,
+  syncEnabled: false,
   updatedAt: "1970-01-01T00:00:00.000Z",
 };
 

@@ -29,6 +29,9 @@ export interface WNContext {
   // boot / splash
   catalogReady: boolean;
   boot: { mode: BootMode } | null;
+  /* null = boot-beslissing loopt nog; true = eerste run (wizard laadt zelf de catalogus in de
+   * laatste stap); false = al ge-onboard (normale herstart via Splash). */
+  firstRun: boolean | null;
   checkUpdates: () => void;
   // her-onboarding
   reonboard: boolean;
@@ -41,6 +44,7 @@ export interface WNContext {
   feelTarget: Feel;
   tuneFacets: AppState["tuneFacets"];
   seed: string | null;
+  syncEnabled: boolean;
   lastQuizScore: number | null;
   // navigatie
   tab: TabId;
@@ -70,6 +74,7 @@ export interface WNContext {
   toggleSeen: (id: string) => void;
   setFeelTarget: (f: Feel) => void;
   setTuneFacets: (f: AppState["tuneFacets"]) => void;
+  setSyncEnabled: (v: boolean) => void;
   finishOnboarding: (p: { level: string; genres: string[]; themes: string[] }) => void;
   resetOnboarding: () => void;
   endBoot: () => void;
@@ -100,20 +105,28 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [quizScope, setQuizScope] = useState("all");
   const [catalogReady, setCatalogReady] = useState(false);
   const [boot, setBoot] = useState<{ mode: BootMode } | null>(null);
+  const [firstRun, setFirstRun] = useState<boolean | null>(null);
   const [reonboard, setReonboard] = useState(false);
 
-  /* Koude start (één keer): toon ALTIJD eerst de Splash en laad de catalogus volledig vóórdat we
-   * de gebruiker doorlaten. De onboarding-beslissing is een simpele check op de lokale
-   * IndexedDB-record (getState), niet op de live-default — zo flitst de wizard nooit even op
-   * mobiel. De Splash laadt de catalogus en zet via onDone (endBoot) → catalogReady. */
+  /* Koude start (één keer). De beslissing leunt op de lokale IndexedDB-record (getState), niet op
+   * de live-default — zo flitst de wizard nooit even op mobiel.
+   *   - Nog niet ge-onboard → firstRun: de wizard verschijnt meteen en laadt zélf de catalogus in
+   *     z'n laatste stap (geen aparte fetch-splash ervóór, geen tweede splash erna).
+   *   - Wel ge-onboard → bepaal de splash-modus (catalogus-versiecheck) en toon de Splash; die
+   *     laadt de catalogus én doet — als sync is ingesteld — een stille OneDrive-pull, vóór we via
+   *     onDone (endBoot) op Ontdek belanden. */
   const bootedOnce = useRef(false);
   useEffect(() => {
     if (bootedOnce.current) return;
     bootedOnce.current = true;
     void (async () => {
       const s = await getState();
-      const mode: BootMode = s.onboarded ? await decideBootMode() : "fetch";
-      setBoot({ mode });
+      if (!s.onboarded) {
+        setFirstRun(true);
+        return;
+      }
+      setFirstRun(false);
+      setBoot({ mode: await decideBootMode() });
     })();
   }, []);
 
@@ -128,6 +141,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setLang: (l) => { void patchState({ lang: l }); },
     catalogReady,
     boot,
+    firstRun,
     checkUpdates: () => {
       setSettingsOpen(false);
       void decideBootMode().then((mode) => setBoot({ mode }));
@@ -141,6 +155,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     feelTarget: state.feelTarget,
     tuneFacets: state.tuneFacets,
     seed: state.seed,
+    syncEnabled: state.syncEnabled,
     lastQuizScore,
 
     tab,
@@ -175,11 +190,16 @@ export function AppProvider({ children }: { children: ReactNode }) {
     toggleSeen: (id) => { void toggleInArray("seen", id); },
     setFeelTarget: (f) => { void patchState({ feelTarget: f }); },
     setTuneFacets: (f) => { void patchState({ tuneFacets: f }); },
+    setSyncEnabled: (v) => { void patchState({ syncEnabled: v }); },
+    /* Afronden van de wizard. Bij de eerste run is de catalogus al geladen in de laatste
+     * wizard-stap; bij her-onboarding stond die er al. We zetten catalogReady/firstRun hier
+     * synchroon zodat we direct naar Ontdek gaan — géén tweede splash. */
     finishOnboarding: (p) => {
       void patchState({ onboarded: true, level: p.level, favoriteGenres: p.genres, favoriteThemes: p.themes });
       setReonboard(false);
+      setFirstRun(false);
+      setCatalogReady(true);
       setTab("discover");
-      setBoot({ mode: "fetch" });
     },
     /* Start de wizard opnieuw zónder het profiel te wissen; `reonboard` toont de annuleren-knop
      * en laat `onboarded` staan, zodat annuleren netjes terugkeert. */

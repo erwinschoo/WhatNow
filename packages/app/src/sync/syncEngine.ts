@@ -1,7 +1,7 @@
 /* Vereenvoudigde OneDrive-sync voor WhatNow. Anders dan bokkiep is hier GEEN end-to-end encryptie:
  * film-voorkeuren zijn niet gevoelig zoals banktransacties. We syncen het AppState-document als één
  * JSON-blob, met backup-vóór-overwrite en optimistic concurrency (eTag/If-Match). */
-import { getToken } from "./msal";
+import { getToken, getTokenSilent, isSyncConfigured } from "./msal";
 import { backupRemote, downloadData, getRemoteMeta, uploadData } from "./graphClient";
 import { db, getState, replaceState, type AppState } from "../db/db";
 
@@ -22,9 +22,9 @@ async function setSyncMeta(meta: SyncMeta): Promise<void> {
 
 export type SyncOutcome = "pushed" | "pulled" | "noop";
 
-/* Push de lokale state naar OneDrive (met backup en If-Match). */
-export async function pushToOneDrive(expectedEtag?: string): Promise<void> {
-  const token = await getToken();
+/* Push de lokale state naar OneDrive (met backup en If-Match). Het token wordt doorgegeven zodat
+ * één sync-ronde niet meerdere keren een token (en dus mogelijk een popup) hoeft te vragen. */
+export async function pushToOneDrive(token: string, expectedEtag?: string): Promise<void> {
   await backupRemote(token);
   const state = await getState();
   const meta = await uploadData(token, state, expectedEtag);
@@ -35,13 +35,12 @@ export async function pushToOneDrive(expectedEtag?: string): Promise<void> {
  * - Geen remote-bestand → push.
  * - Remote nieuwer dan lokaal → pull (overschrijf lokaal).
  * - Lokaal nieuwer of gelijk → push. */
-export async function syncNow(): Promise<SyncOutcome> {
-  const token = await getToken();
+async function syncWithToken(token: string): Promise<SyncOutcome> {
   const remoteMeta = await getRemoteMeta(token);
   const local = await getState();
 
   if (!remoteMeta) {
-    await pushToOneDrive();
+    await pushToOneDrive(token);
     return "pushed";
   }
 
@@ -54,8 +53,28 @@ export async function syncNow(): Promise<SyncOutcome> {
     return "pulled";
   }
 
-  await pushToOneDrive(remoteMeta.eTag);
+  await pushToOneDrive(token, remoteMeta.eTag);
   return "pushed";
+}
+
+/* Handmatige sync (Settings): mag een inlog-popup openen als het stille token verlopen is. */
+export async function syncNow(): Promise<SyncOutcome> {
+  return syncWithToken(await getToken());
+}
+
+/* Stille sync bij app-start: alleen als sync geconfigureerd is én er stil een token te krijgen is
+ * (account in cache, token nog geldig). Opent NOOIT een popup en faalt stil — bij geen verbinding
+ * of offline gaat de app gewoon door op de lokale state. Geeft de uitkomst, of null als er niets
+ * (stil) te syncen viel. */
+export async function trySilentSync(): Promise<SyncOutcome | null> {
+  if (!isSyncConfigured()) return null;
+  const token = await getTokenSilent();
+  if (!token) return null;
+  try {
+    return await syncWithToken(token);
+  } catch {
+    return null;
+  }
 }
 
 export async function lastSyncedAt(): Promise<string | null> {
